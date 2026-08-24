@@ -5,6 +5,20 @@ declare(strict_types=1);
 require_once "whitelist.php";
 
 /**
+ * Get an environment variable from $_ENV, $_SERVER, or getenv()
+ *
+ * On Vercel, variables set in the dashboard are only available in
+ * $_SERVER and getenv(), so $_ENV alone is not sufficient
+ *
+ * @param string $key Environment variable name
+ * @return string|false Value of the variable or false if not set
+ */
+function getEnvVar(string $key): string|false
+{
+    return $_ENV[$key] ?? ($_SERVER[$key] ?? getenv($key));
+}
+
+/**
  * Build a GraphQL query for a contribution graph
  *
  * @param string $user GitHub username to get graphs for
@@ -169,11 +183,15 @@ function getGitHubTokens(): array
         return $GLOBALS["ALL_TOKENS"];
     }
     // find all tokens in environment variables
-    $tokens = isset($_ENV["TOKEN"]) ? [$_ENV["TOKEN"]] : [];
+    $tokens = [];
+    $mainToken = getEnvVar("TOKEN");
+    if ($mainToken) {
+        $tokens[] = $mainToken;
+    }
     $index = 2;
-    while (isset($_ENV["TOKEN{$index}"])) {
+    while ($token = getEnvVar("TOKEN{$index}")) {
         // add token to list
-        $tokens[] = $_ENV["TOKEN{$index}"];
+        $tokens[] = $token;
         $index++;
     }
     // store for future use
